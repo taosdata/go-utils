@@ -1,14 +1,14 @@
 package connector
 
 import (
-	"github.com/taosdata/go-utils/json"
-	"github.com/taosdata/go-utils/tdengine/common"
-	"github.com/taosdata/go-utils/tdengine/config"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/taosdata/go-utils/json"
+	"github.com/taosdata/go-utils/tdengine/common"
+	"github.com/taosdata/go-utils/tdengine/config"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -17,14 +17,16 @@ import (
 	"time"
 )
 
+const Layout = "2006-01-02 15:04:05.999999999"
+
 type TDEngineRestfulResp struct {
-	Status string          `json:"status"`
-	Head   []string        `json:"head"` //从 2.0.17 版本开始，建议不要依赖 head 返回值来判断数据列类型，而推荐使用 column_meta。在未来版本中，有可能会从返回值中去掉 head 这一项
-	Data   [][]interface{} `json:"data"`
-	//ColumnMeta [][]interface{} `json:"column_meta"` //从 2.0.17 版本开始，返回值中增加这一项来说明 data 里每一列的数据类型。具体每个列会用三个值来说明，分别为：列名、列类型、类型长度
-	//Rows       int             `json:"rows"`
-	Code int    `json:"code"`
-	Desc string `json:"desc"`
+	Status     string          `json:"status"`
+	Head       []string        `json:"-"` //从 2.0.17 版本开始，建议不要依赖 head 返回值来判断数据列类型，而推荐使用 column_meta。在未来版本中，有可能会从返回值中去掉 head 这一项
+	Data       [][]interface{} `json:"data"`
+	ColumnMeta [][]interface{} `json:"column_meta"` //从 2.0.17 版本开始，返回值中增加这一项来说明 data 里每一列的数据类型。具体每个列会用三个值来说明，分别为：列名、列类型、类型长度
+	Rows       int             `json:"rows"`
+	Code       int             `json:"code"`
+	Desc       string          `json:"desc"`
 }
 type RestfulConnector struct {
 	address    string
@@ -112,7 +114,7 @@ func (h *RestfulConnector) Exec(ctx context.Context, sql string) (int64, error) 
 	if err != nil {
 		return 0, err
 	}
-	return int64(data.Data[0][0].(float64)), nil
+	return int64(data.Rows), nil
 }
 
 func (h *RestfulConnector) query(ctx context.Context, sql string) (*TDEngineRestfulResp, error) {
@@ -144,5 +146,54 @@ func (h *RestfulConnector) query(ctx context.Context, sql string) (*TDEngineRest
 		}
 		return data, fmt.Errorf("query: %s error,response body: %#v", sql, data)
 	}
+	//构建 head data
+	data.Head = make([]string, 0, len(data.ColumnMeta))
+	types := make([]int, len(data.ColumnMeta))
+	for index, columnMessage := range data.ColumnMeta {
+		colName := columnMessage[0].(string)
+		colType := columnMessage[1].(float64)
+		types[index] = int(colType)
+		data.Head = append(data.Head, colName)
+	}
+	for rowIndex, row := range data.Data {
+		for columnIndex, value := range row {
+			if value == nil {
+				continue
+			}
+			switch value.(type) {
+			case string:
+				if types[columnIndex] == 9 {
+					t, _ := time.Parse(Layout, value.(string))
+					data.Data[rowIndex][columnIndex] = t
+				}
+			case float64:
+				switch types[columnIndex] {
+				case 1:
+					data.Data[rowIndex][columnIndex] = int(value.(float64)) == 1
+				case 2:
+					data.Data[rowIndex][columnIndex] = int8(value.(float64))
+				case 3:
+					data.Data[rowIndex][columnIndex] = int16(value.(float64))
+				case 4:
+					data.Data[rowIndex][columnIndex] = int32(value.(float64))
+				case 5:
+					data.Data[rowIndex][columnIndex] = int64(value.(float64))
+				case 6:
+					data.Data[rowIndex][columnIndex] = float32(value.(float64))
+				case 7:
+					data.Data[rowIndex][columnIndex] = value.(float64)
+				}
+			}
+		}
+	}
 	return data, nil
+}
+
+type RawTDEngineRestfulResp struct {
+	Status     string              `json:"status"`
+	Data       [][]json.RawMessage `json:"data"`
+	ColumnMeta [][]interface{}     `json:"column_meta"` //从 2.0.17 版本开始，返回值中增加这一项来说明 data 里每一列的数据类型。具体每个列会用三个值来说明，分别为：列名、列类型、类型长度
+	Rows       int                 `json:"rows"`
+	Code       int                 `json:"code"`
+	Desc       string              `json:"desc"`
 }

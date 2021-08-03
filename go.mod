@@ -10,5 +10,5 @@ require (
 	github.com/json-iterator/go v1.1.11
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/sirupsen/logrus v1.8.1
-	github.com/taosdata/driver-go v0.0.0-20210722071233-99176d298e90
+	github.com/taosdata/driver-go v0.0.0-20210803110006-be7b78e9b36b
 )
