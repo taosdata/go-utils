@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const Layout = "2006-01-02 15:04:05.999999999"
+const Layout = "2006-01-02T15:04:05.999999999-0700"
 
 type TDEngineRestfulResp struct {
 	Status     string          `json:"status"`
@@ -93,7 +93,7 @@ func NewRestfulConnector(conf *config.TDengineRestful) (*RestfulConnector, error
 		return nil, fmt.Errorf("unsupported auth type %s", conf.AuthType)
 	}
 
-	connector.url.Path = path.Join(connector.url.Path, "/rest/sql")
+	connector.url.Path = path.Join(connector.url.Path, "/rest/sqlutc")
 	connector.queryUrl = connector.url.String()
 	return connector, nil
 }
