@@ -22,11 +22,10 @@ type Executor struct {
 	timeLayout string
 	db         string
 	logger     Logger
-	ctx        context.Context
 }
 
 func NewExecutor(connector connector.TDengineConnector, db string, showSQL bool, logger Logger) *Executor {
-	return &Executor{connector: connector, db: db, showSQL: showSQL, logger: logger, ctx: context.Background()}
+	return &Executor{connector: connector, db: db, showSQL: showSQL, logger: logger}
 }
 
 type TableInfo struct {
@@ -40,8 +39,8 @@ type FieldInfo struct {
 	Length int
 }
 
-func (e *Executor) DescribeTable(tableName string) (*TableInfo, error) {
-	data, err := e.doQuery(e.ctx, fmt.Sprintf("describe %s", e.withDBName(tableName)))
+func (e *Executor) DescribeTable(ctx context.Context, tableName string) (*TableInfo, error) {
+	data, err := e.DoQuery(ctx, fmt.Sprintf("describe %s", e.WithDBName(tableName)))
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +68,7 @@ func (e *Executor) DescribeTable(tableName string) (*TableInfo, error) {
 		f := &FieldInfo{
 			Name:   d[FieldIndex].(string),
 			Type:   d[TypeIndex].(string),
-			Length: int(d[LengthIndex].(float64)),
+			Length: int(d[LengthIndex].(int32)),
 		}
 		if d[NoteIndex] == "TAG" {
 			tags = append(tags, f)
@@ -83,7 +82,7 @@ func (e *Executor) DescribeTable(tableName string) (*TableInfo, error) {
 	}, nil
 }
 
-func (e *Executor) CreateSTable(tableName string, info *TableInfo) error {
+func (e *Executor) CreateSTable(ctx context.Context, tableName string, info *TableInfo) error {
 	fields := info.Fields
 	tags := info.Tags
 	if len(fields) == 0 {
@@ -102,20 +101,20 @@ func (e *Executor) CreateSTable(tableName string, info *TableInfo) error {
 	}
 	sql := fmt.Sprintf(
 		"create stable if not exists %s (%s) tags (%s)",
-		e.withDBName(tableName),
+		e.WithDBName(tableName),
 		strings.Join(fieldSqlList, ","),
 		strings.Join(tagsSqlList, ","),
 	)
-	_, err := e.doExec(context.Background(), sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) InsertUsingSTable(tableName string, StableName string, tags string, values []string) error {
+func (e *Executor) InsertUsingSTable(ctx context.Context, tableName string, stableName string, tags string, values []string) error {
 	b := pool.BytesPoolGet()
 	b.WriteString("insert into ")
-	b.WriteString(e.withDBName(tableName))
+	b.WriteString(e.WithDBName(tableName))
 	b.WriteString(" using ")
-	b.WriteString(e.withDBName(StableName))
+	b.WriteString(e.WithDBName(stableName))
 	b.WriteString(" tags (")
 	b.WriteString(tags)
 	b.WriteString(") values ")
@@ -126,59 +125,59 @@ func (e *Executor) InsertUsingSTable(tableName string, StableName string, tags s
 	}
 	sql := b.String()
 	pool.BytesPoolPut(b)
-	_, err := e.doExec(e.ctx, sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) AddColumn(tableType string, tableName string, info *FieldInfo) error {
+func (e *Executor) AddColumn(ctx context.Context, tableType string, tableName string, info *FieldInfo) error {
 	sql := fmt.Sprintf(
 		"alter %s %s add column %s ",
 		tableType,
-		e.withDBName(tableName),
+		e.WithDBName(tableName),
 		e.generateFieldSql(info),
 	)
-	_, err := e.doExec(e.ctx, sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) AddTag(tableName string, info *FieldInfo) error {
+func (e *Executor) AddTag(ctx context.Context, tableName string, info *FieldInfo) error {
 	sql := fmt.Sprintf(
 		"alter stable %s add tag %s",
-		e.withDBName(tableName),
+		e.WithDBName(tableName),
 		e.generateFieldSql(info),
 	)
-	_, err := e.doExec(e.ctx, sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) ModifyTagLength(tableName string, info *FieldInfo) error {
+func (e *Executor) ModifyTagLength(ctx context.Context, tableName string, info *FieldInfo) error {
 	sql := fmt.Sprintf(
 		"alert stable %s modify TAG %s",
-		e.withDBName(tableName),
+		e.WithDBName(tableName),
 		e.generateFieldSql(info))
-	_, err := e.doExec(e.ctx, sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) ModifyColumnLength(tableType string, tableName string, info *FieldInfo) error {
+func (e *Executor) ModifyColumnLength(ctx context.Context, tableType string, tableName string, info *FieldInfo) error {
 	sql := fmt.Sprintf(
 		"alert %s %s modify column %s",
 		tableType,
-		e.withDBName(tableName),
+		e.WithDBName(tableName),
 		e.generateFieldSql(info))
-	_, err := e.doExec(e.ctx, sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) CreateDatabase(keep int) error {
-	sql := fmt.Sprintf("create database if not exists %s keep %d update 1", e.db, keep)
-	_, err := e.doExec(e.ctx, sql)
+func (e *Executor) CreateDatabase(ctx context.Context, keep int, update int) error {
+	sql := fmt.Sprintf("create database if not exists %s keep %d update %d", e.db, keep, update)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
-func (e *Executor) GetPrecision() (string, error) {
+func (e *Executor) GetPrecision(ctx context.Context) (string, error) {
 	sql := "show databases"
-	data, err := e.doQuery(e.ctx, sql)
+	data, err := e.DoQuery(ctx, sql)
 	if err != nil {
 		return "", err
 	}
@@ -205,15 +204,9 @@ func (e *Executor) GetPrecision() (string, error) {
 	return "", errors.New("precision not found")
 }
 
-func (e *Executor) AlterDatabase(parameter string, value int) error {
+func (e *Executor) AlterDatabase(ctx context.Context, parameter string, value int) error {
 	sql := fmt.Sprintf("ALTER DATABASE %s %s %d", e.db, parameter, value)
-	_, err := e.doExec(e.ctx, sql)
-	return err
-}
-
-func (e *Executor) UseDatabase() error {
-	sql := fmt.Sprintf("use %s", e.db)
-	_, err := e.doExec(e.ctx, sql)
+	_, err := e.DoExec(ctx, sql)
 	return err
 }
 
@@ -221,7 +214,7 @@ func (e *Executor) SetTimeLayout(layout string) {
 	e.timeLayout = layout
 }
 
-func (e *Executor) Query(request *common.QueryRequest) (*common.QueryResponse, error) {
+func (e *Executor) Query(ctx context.Context, request *common.QueryRequest) (*common.QueryResponse, error) {
 	var resp common.QueryResponse
 	if len(request.Tables) == 0 {
 		return &resp, nil
@@ -230,7 +223,7 @@ func (e *Executor) Query(request *common.QueryRequest) (*common.QueryResponse, e
 	resultChan := make(chan []*common.QueryResult, 20)
 	errorChan := make(chan error)
 	finishChan := make(chan struct{})
-	ctx, cancel := context.WithCancel(e.ctx)
+	cancelCtx, cancel := context.WithCancel(ctx)
 	defer func() {
 		finishChan <- struct{}{}
 		cancel()
@@ -265,7 +258,7 @@ func (e *Executor) Query(request *common.QueryRequest) (*common.QueryResponse, e
 			if err != nil {
 				return
 			}
-			data, queryErr := e.queryTask(ctx, tableName, tableInfo, request)
+			data, queryErr := e.queryTask(cancelCtx, tableName, tableInfo, request)
 			if queryErr != nil {
 				errorChan <- queryErr
 			} else {
@@ -308,7 +301,7 @@ func (e *Executor) queryTask(ctx context.Context, tableName string, tableInfo *c
 				return nil, err
 			}
 
-			data, err := e.doQuery(ctx, sql)
+			data, err := e.DoQuery(ctx, sql)
 			if err != nil {
 				return nil, err
 			}
@@ -343,7 +336,7 @@ func (e *Executor) queryTask(ctx context.Context, tableName string, tableInfo *c
 		if err != nil {
 			return nil, err
 		}
-		data, err := e.doQuery(ctx, sql)
+		data, err := e.DoQuery(ctx, sql)
 		if err != nil {
 			return nil, err
 		}
@@ -365,11 +358,11 @@ func (e *Executor) queryTask(ctx context.Context, tableName string, tableInfo *c
 	return result, nil
 }
 
-func (e *Executor) QueryOneFromSTable(sTableName string, whereConditions []string, ts time.Time) (*connector.Data, error) {
+func (e *Executor) QueryOneFromSTable(ctx context.Context, sTableName string, whereConditions []string, ts time.Time) (*connector.Data, error) {
 	// select * from stable where ts = ? and tag1 = ? and tag2 = ?
 	b := pool.BytesPoolGet()
 	b.WriteString("select * from ")
-	b.WriteString(e.withDBName(sTableName))
+	b.WriteString(e.WithDBName(sTableName))
 	b.WriteString(" where ts = '")
 	b.WriteString(e.formatTime(ts))
 	b.WriteByte('\'')
@@ -379,42 +372,125 @@ func (e *Executor) QueryOneFromSTable(sTableName string, whereConditions []strin
 	}
 	sql := b.String()
 	pool.BytesPoolPut(b)
-	data, err := e.doQuery(e.ctx, sql)
+	data, err := e.DoQuery(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
 	return data, err
 }
 
-func (e *Executor) QueryOneFromTable(tableName string, ts time.Time) (*connector.Data, error) {
+func (e *Executor) QueryOneFromTable(ctx context.Context, tableName string, ts time.Time) (*connector.Data, error) {
 	// select * from table where ts = ?
 	b := pool.BytesPoolGet()
 	b.WriteString("select * from ")
-	b.WriteString(e.withDBName(tableName))
+	b.WriteString(e.WithDBName(tableName))
 	b.WriteString(" where ts = '")
 	b.WriteString(e.formatTime(ts))
 	b.WriteByte('\'')
 	sql := b.String()
 	pool.BytesPoolPut(b)
-	data, err := e.doQuery(e.ctx, sql)
+	data, err := e.DoQuery(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
 	return data, err
 }
 
-func (e *Executor) doQuery(ctx context.Context, sql string) (*connector.Data, error) {
+func (e *Executor) DoQuery(ctx context.Context, sql string) (*connector.Data, error) {
 	if e.showSQL {
 		e.logger.Info(sql)
 	}
 	return e.connector.Query(ctx, sql)
 }
 
-func (e *Executor) doExec(ctx context.Context, sql string) (int64, error) {
+func (e *Executor) DoExec(ctx context.Context, sql string) (int64, error) {
 	if e.showSQL {
 		e.logger.Info(sql)
 	}
 	return e.connector.Exec(ctx, sql)
+}
+
+type ShowTablesInfo struct {
+	Name        string
+	CreatedTime time.Time
+	columns     int16
+	StableName  string
+	Uid         int64
+	Tid         int32
+	VgId        int32
+}
+
+type ShowSTablesInfo struct {
+	Name        string
+	CreatedTime time.Time
+	Columns     int16
+	tags        int16
+	tables      int32
+}
+
+func (e *Executor) ShowStables(ctx context.Context) ([]*ShowSTablesInfo, error) {
+	b := pool.BytesPoolGet()
+	b.WriteString("show ")
+	b.WriteString(e.WithDBName("stables"))
+	sql := b.String()
+	pool.BytesPoolPut(b)
+	data, err := e.DoQuery(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*ShowSTablesInfo, 0, len(data.Data))
+	for _, d := range data.Data {
+		result = append(result, &ShowSTablesInfo{
+			Name:        d[0].(string),
+			CreatedTime: d[1].(time.Time),
+			Columns:     d[2].(int16),
+			tags:        d[3].(int16),
+			tables:      d[4].(int32),
+		})
+	}
+	return result, nil
+}
+
+func (e *Executor) ShowTables(ctx context.Context) ([]*ShowTablesInfo, error) {
+	b := pool.BytesPoolGet()
+	b.WriteString("show ")
+	b.WriteString(e.WithDBName("tables"))
+	sql := b.String()
+	pool.BytesPoolPut(b)
+	data, err := e.DoQuery(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*ShowTablesInfo, 0, len(data.Data))
+	for _, d := range data.Data {
+		result = append(result, &ShowTablesInfo{
+			Name:        d[0].(string),
+			CreatedTime: d[1].(time.Time),
+			columns:     d[2].(int16),
+			StableName:  d[3].(string),
+			Uid:         d[4].(int64),
+			Tid:         d[5].(int32),
+			VgId:        d[6].(int32),
+		})
+	}
+	return result, nil
+}
+
+func (e *Executor) GetAllStableNames(ctx context.Context) ([]string, error) {
+	b := pool.BytesPoolGet()
+	b.WriteString("show ")
+	b.WriteString(e.WithDBName("stables"))
+	sql := b.String()
+	pool.BytesPoolPut(b)
+	data, err := e.DoQuery(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(data.Data))
+	for _, d := range data.Data {
+		result = append(result, d[0].(string))
+	}
+	return result, nil
 }
 
 type info struct {
@@ -550,7 +626,7 @@ func (e *Executor) generateQuerySQL(parameter *queryParameter) (string, error) {
 	b.WriteString("select ")
 	b.WriteString(strings.Join(columns, ","))
 	b.WriteString(" from ")
-	b.WriteString(e.withDBName(parameter.tableName))
+	b.WriteString(e.WithDBName(parameter.tableName))
 	b.WriteString(" where ts ")
 	alreadyHaveWhere := false
 	if !parameter.start.IsZero() && !parameter.end.IsZero() {
@@ -622,7 +698,7 @@ func (e *Executor) generateQuerySQL(parameter *queryParameter) (string, error) {
 	return sql, nil
 }
 
-func (e *Executor) withDBName(source string) string {
+func (e *Executor) WithDBName(source string) string {
 	return fmt.Sprintf("%s.%s", e.db, source)
 }
 

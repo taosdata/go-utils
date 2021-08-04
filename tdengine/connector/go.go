@@ -3,15 +3,15 @@
 package connector
 
 import (
-	"github.com/taosdata/go-utils/pool"
-	"github.com/taosdata/go-utils/tdengine/common"
-	tdengineConfig "github.com/taosdata/go-utils/tdengine/config"
 	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
 	"github.com/taosdata/driver-go/taosSql"
+	"github.com/taosdata/go-utils/pool"
+	"github.com/taosdata/go-utils/tdengine/common"
+	tdengineConfig "github.com/taosdata/go-utils/tdengine/config"
 	"reflect"
 	"sync"
 	"time"
