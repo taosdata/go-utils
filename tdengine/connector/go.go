@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	taosErrors "github.com/taosdata/driver-go/errors"
 	"github.com/taosdata/driver-go/taosSql"
 	"github.com/taosdata/go-utils/pool"
 	"github.com/taosdata/go-utils/tdengine/common"
@@ -195,7 +196,7 @@ func (g *GoConnector) changeError(err error) error {
 	if err == nil {
 		return nil
 	}
-	var taosError *taosSql.TaosError
+	var taosError *taosErrors.TaosError
 	if errors.As(err, &taosError) {
 		return &common.TDengineError{
 			Code: int(taosError.Code),
