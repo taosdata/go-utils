@@ -28,6 +28,7 @@ type TDEngineRestfulResp struct {
 	Code       int             `json:"code"`
 	Desc       string          `json:"desc"`
 }
+
 type RestfulConnector struct {
 	address    string
 	authType   string
@@ -146,7 +147,10 @@ func (h *RestfulConnector) query(ctx context.Context, sql string) (*TDEngineRest
 		}
 		return data, fmt.Errorf("query: %s error,response body: %#v", sql, data)
 	}
-	//构建 head data
+	return formatResponse(data)
+}
+
+func formatResponse(data *TDEngineRestfulResp) (*TDEngineRestfulResp, error) {
 	data.Head = make([]string, 0, len(data.ColumnMeta))
 	types := make([]int, len(data.ColumnMeta))
 	for index, columnMessage := range data.ColumnMeta {

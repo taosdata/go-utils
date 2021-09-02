@@ -8,8 +8,9 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	taosErrors "github.com/taosdata/driver-go/errors"
-	"github.com/taosdata/driver-go/taosSql"
+	taosErrors "github.com/taosdata/driver-go/v2/errors"
+	_ "github.com/taosdata/driver-go/v2/taosSql"
+	taosType "github.com/taosdata/driver-go/v2/types"
 	"github.com/taosdata/go-utils/pool"
 	"github.com/taosdata/go-utils/tdengine/common"
 	tdengineConfig "github.com/taosdata/go-utils/tdengine/config"
@@ -44,19 +45,19 @@ func (g *GoConnector) Exec(ctx context.Context, sql string) (int64, error) {
 }
 
 var (
-	nullInt8    = reflect.TypeOf(taosSql.NullInt8{})
-	nullInt16   = reflect.TypeOf(taosSql.NullInt16{})
-	nullInt32   = reflect.TypeOf(taosSql.NullInt32{})
-	nullInt64   = reflect.TypeOf(taosSql.NullInt64{})
-	nullUInt8   = reflect.TypeOf(taosSql.NullUInt8{})
-	nullUInt16  = reflect.TypeOf(taosSql.NullUInt16{})
-	nullUInt32  = reflect.TypeOf(taosSql.NullUInt32{})
-	nullUInt64  = reflect.TypeOf(taosSql.NullUInt64{})
-	nullFloat32 = reflect.TypeOf(taosSql.NullFloat32{})
-	nullFloat64 = reflect.TypeOf(taosSql.NullFloat64{})
-	nullTime    = reflect.TypeOf(taosSql.NullTime{})
-	nullBool    = reflect.TypeOf(taosSql.NullBool{})
-	nullString  = reflect.TypeOf(taosSql.NullString{})
+	nullInt8    = reflect.TypeOf(taosType.NullInt8{})
+	nullInt16   = reflect.TypeOf(taosType.NullInt16{})
+	nullInt32   = reflect.TypeOf(taosType.NullInt32{})
+	nullInt64   = reflect.TypeOf(taosType.NullInt64{})
+	nullUInt8   = reflect.TypeOf(taosType.NullUInt8{})
+	nullUInt16  = reflect.TypeOf(taosType.NullUInt16{})
+	nullUInt32  = reflect.TypeOf(taosType.NullUInt32{})
+	nullUInt64  = reflect.TypeOf(taosType.NullUInt64{})
+	nullFloat32 = reflect.TypeOf(taosType.NullFloat32{})
+	nullFloat64 = reflect.TypeOf(taosType.NullFloat64{})
+	nullTime    = reflect.TypeOf(taosType.NullTime{})
+	nullBool    = reflect.TypeOf(taosType.NullBool{})
+	nullString  = reflect.TypeOf(taosType.NullString{})
 )
 
 func (g *GoConnector) Query(ctx context.Context, q string) (*Data, error) {

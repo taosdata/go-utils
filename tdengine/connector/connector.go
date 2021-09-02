@@ -3,9 +3,9 @@
 package connector
 
 import (
+	"fmt"
 	"github.com/taosdata/go-utils/tdengine/common"
 	"github.com/taosdata/go-utils/tdengine/config"
-	"fmt"
 )
 
 func NewTDengineConnector(connectorType string, conf interface{}) (TDengineConnector, error) {
