@@ -7,25 +7,17 @@ import (
 )
 
 type Config struct {
-	Enabled    bool   `json:"enabled"`
-	Address    string `json:"address"`
-	ClientID   string `json:"clientID"`
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	KeepAlive  int64  `json:"keepAlive"`
-	CAPath     string `json:"caPath"`
-	CertPath   string `json:"certPath"`
-	KeyPath    string `json:"keyPath"`
-	ShareTopic bool   `json:"shareTopic"`
+	Address   string `json:"address"`
+	ClientID  string `json:"clientID"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	KeepAlive int64  `json:"keepAlive"`
+	CAPath    string `json:"caPath"`
+	CertPath  string `json:"certPath"`
+	KeyPath   string `json:"keyPath"`
 }
 
 func (mqtt *Config) Init() {
-	if val := os.Getenv("MQTT_ENABLED"); val != "" {
-		mqtt.Enabled, _ = strconv.ParseBool(val)
-	}
-
-	flag.BoolVar(&mqtt.Enabled, "mqtt.enabled", mqtt.Enabled, "mqtt enabled")
-
 	if addr := os.Getenv("MQTT_ADDR"); addr != "" {
 		mqtt.Address = addr
 	}

@@ -24,38 +24,24 @@ type Connector struct {
 }
 
 func newTLSConfig(conf *Config) *tls.Config {
-	// logger.Debugf("mqtt NewTLSConfig: %s %s %s", caFile, certFile, keyFile)
-	// var err error
-	// var cert tls.Certificate
-
-	certpool := x509.NewCertPool()
-	//certpool.AppendCertsFromPEM([]byte(setting.CAPath))
+	certPool := x509.NewCertPool()
 	caCert, err := ioutil.ReadFile(conf.CAPath)
 	if err != nil {
 		panic(err)
 	}
-	certpool.AppendCertsFromPEM(caCert)
+	certPool.AppendCertsFromPEM(caCert)
 
-	//cert, err := tls.X509KeyPair([]byte(setting.ClientCert), []byte(setting.Key))
 	cert, err := tls.LoadX509KeyPair(conf.CertPath, conf.KeyPath)
 	if err != nil {
 		panic(err)
 	}
 
 	return &tls.Config{
-		// RootCAs = certs used to verify server cert.
-		RootCAs: certpool,
-		// ClientAuth = whether to request cert from server.
-		// Since the server is set up for SSL, this happens
-		// anyways.
-		ClientAuth: tls.NoClientCert,
-		// ClientCAs = certs used to validate client cert.
-		ClientCAs: nil,
-		// InsecureSkipVerify = verify that cert contents
-		// match server. IP matches what is in cert etc.
+		RootCAs:            certPool,
+		ClientAuth:         tls.NoClientCert,
+		ClientCAs:          nil,
 		InsecureSkipVerify: true,
-		// Certificates = list of certs client sends to server.
-		Certificates: []tls.Certificate{cert},
+		Certificates:       []tls.Certificate{cert},
 	}
 }
 
@@ -72,7 +58,7 @@ func (conn *Connector) SubscribeWithReceiveTime(topic string, qos byte, handler 
 			handler(message.Topic(), message.Payload(), now)
 		})
 		if antsError != nil {
-			conn.logger.WithError(antsError).Error("creat ants ")
+			conn.logger.WithError(antsError).Error("creat ants")
 		}
 	}).Error()
 	if err != nil {
@@ -126,7 +112,7 @@ func (conn *Connector) connect(conf Config) {
 		time.Sleep(30 * time.Second)
 		token = client.Connect()
 	}
-	conn.logger.Info("connect to Config Server...")
+	conn.logger.Info("connect to MQTT Server...")
 }
 
 func (conn *Connector) onDisconnected() {
@@ -144,17 +130,16 @@ func (conn *Connector) Publish(topic string, qos byte, retained bool, payload []
 	if conn.client == nil || !conn.Connected {
 		return errors.New("mqtt server not connected")
 	}
-
 	return conn.client.Publish(topic, qos, retained, payload).Error()
 }
 
-func NewConnector(config Config, pool *ants.Pool, onConnect func()) *Connector {
+func NewConnector(config Config, pool *ants.Pool, logger logrus.FieldLogger, onConnect func()) *Connector {
 	conn := &Connector{
 		start:     true,
 		pool:      pool,
 		onConnect: onConnect,
+		logger:    logger,
 	}
-
 	go conn.connect(config)
 	return conn
 }
