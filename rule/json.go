@@ -15,47 +15,47 @@ import (
 )
 
 type Config struct {
-	RuleName string `json:"rule_name"`
+	RuleName string `json:"ruleName"`
 	Topic    string `json:"topic"`
 	Rule     *Rule  `json:"rule"`
 }
 
 type Rule struct {
 	//规定超级表
-	STable  string     `json:"s_table"`
+	STable  string     `json:"sTable"`
 	Tags    []*Field   `json:"tags"`
 	Columns []*Field   `json:"columns"`
 	Table   *TableName `json:"table"`
 }
 
 type TableName struct {
-	DefaultValue string `json:"default_value"`
+	DefaultValue string `json:"defaultValue"`
 	Path         string `json:"path"`
 }
 
 type Field struct {
 	Name         string      `json:"name"`
-	ValueType    string      `json:"value_type"`
+	ValueType    string      `json:"valueType"`
 	Length       int         `json:"length"`
-	DefaultValue interface{} `json:"default_value"`
+	DefaultValue interface{} `json:"defaultValue"`
 	Path         string      `json:"path"`
-	TimeLayout   string      `json:"time_layout"`
+	TimeLayout   string      `json:"timeLayout"`
 }
 
 type Column struct {
 	Name         string      `json:"name"`
 	Index        int         `json:"index"`
-	ValueType    ValueType   `json:"value_type"`
-	TimeLayout   string      `json:"time_layout"`
-	FieldType    FieldType   `json:"field_type"`
-	DefaultValue interface{} `json:"default_value"`
+	ValueType    ValueType   `json:"valueType"`
+	TimeLayout   string      `json:"timeLayout"`
+	FieldType    FieldType   `json:"fieldType"`
+	DefaultValue interface{} `json:"defaultValue"`
 	Path         string      `json:"path"`
 }
 
 type Table struct {
-	STable    string `json:"s_table"`
-	TagLen    int    `json:"tag_len"`
-	ColumnLen int    `json:"column_len"`
+	STable    string `json:"sTable"`
+	TagLen    int    `json:"tagLen"`
+	ColumnLen int    `json:"columnLen"`
 	*TableName
 }
 
