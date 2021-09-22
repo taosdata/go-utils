@@ -284,12 +284,13 @@ func (r *Manage) Parse(topic string, data []byte) (*Result, error) {
 			if !result.Exists() {
 				if column.FieldType == ColumnType && column.Index == 0 {
 					res.Columns[0] = time.Now()
-				}
-				switch column.FieldType {
-				case ColumnType:
-					res.Columns[column.Index] = column.DefaultValue
-				case TagType:
-					res.Tags[column.Index] = column.DefaultValue
+				} else {
+					switch column.FieldType {
+					case ColumnType:
+						res.Columns[column.Index] = column.DefaultValue
+					case TagType:
+						res.Tags[column.Index] = column.DefaultValue
+					}
 				}
 			} else {
 				v, err := parseValue(column, result)
