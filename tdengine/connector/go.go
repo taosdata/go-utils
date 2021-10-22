@@ -1,4 +1,4 @@
-// +build !windows
+// +build taosc
 
 package connector
 
@@ -58,6 +58,7 @@ var (
 	nullTime    = reflect.TypeOf(taosType.NullTime{})
 	nullBool    = reflect.TypeOf(taosType.NullBool{})
 	nullString  = reflect.TypeOf(taosType.NullString{})
+	nullJson    = reflect.TypeOf(taosType.NullJson{})
 )
 
 func (g *GoConnector) Query(ctx context.Context, q string) (*Data, error) {
@@ -107,6 +108,8 @@ func (g *GoConnector) Query(ctx context.Context, q string) (*Data, error) {
 			types[i] = nullString
 		case "TIMESTAMP":
 			types[i] = nullTime
+		case "JSON":
+			types[i] = nullJson
 		}
 	}
 	var dbResult [][]interface{}

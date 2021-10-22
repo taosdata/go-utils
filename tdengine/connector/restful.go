@@ -186,6 +186,14 @@ func formatResponse(data *TDEngineRestfulResp) (*TDEngineRestfulResp, error) {
 					data.Data[rowIndex][columnIndex] = float32(value.(float64))
 				case 7:
 					data.Data[rowIndex][columnIndex] = value.(float64)
+				case 11:
+					data.Data[rowIndex][columnIndex] = uint8(value.(float64))
+				case 12:
+					data.Data[rowIndex][columnIndex] = uint16(value.(float64))
+				case 13:
+					data.Data[rowIndex][columnIndex] = uint32(value.(float64))
+				case 14:
+					data.Data[rowIndex][columnIndex] = uint64(value.(float64))
 				}
 			}
 		}

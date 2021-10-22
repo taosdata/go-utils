@@ -1,5 +1,3 @@
-// +build windows
-
 package connector
 
 import (
@@ -15,7 +13,7 @@ func NewTDengineConnector(connectorType string, conf interface{}) (TDengineConne
 		restfulConfig := conf.(*config.TDengineRestful)
 		return NewRestfulConnector(restfulConfig)
 	case common.TDengineGoConnectorType:
-		return nil, errors.New("not support on windows")
+		return nil, errors.New("not support taosc")
 	default:
 		return nil, fmt.Errorf("unsupported TDengine connector type %s", connectorType)
 	}

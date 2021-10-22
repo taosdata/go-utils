@@ -18,7 +18,7 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/sirupsen/logrus v1.8.1
-	github.com/taosdata/driver-go/v2 v2.0.0
+	github.com/taosdata/driver-go/v2 v2.0.1-0.20211018081904-0a2a3ef6c829
 	github.com/tidwall/gjson v1.9.1
 	google.golang.org/protobuf v1.27.1 // indirect
 )
